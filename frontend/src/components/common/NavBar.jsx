@@ -27,8 +27,8 @@ const AppNavBar = () => {
                         <Nav.Link as={NavLink} to="/bookmarks">Watchlist</Nav.Link>
                     </Nav>
                     <Nav className="ms-auto">
-                        <Nav.Link as={NavLink} to="/login">Login</Nav.Link>
-                        <Nav.Link as={NavLink} to="/register">Register</Nav.Link>
+                        <Nav.Link as={NavLink} to="/login">Signin</Nav.Link>
+                        {/* <Nav.Link as={NavLink} to="/register">Register</Nav.Link> */}
                     </Nav>
                     <Form className="d-flex ms-2" onSubmit={handleSearch}>
                         <Form.Control

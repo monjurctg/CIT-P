@@ -28,11 +28,13 @@ const Movies = () => {
                     data = await backendApi.getMovies(page);
                 }
 
+
+
                 // MOCK DATA GENERATOR IF EMPTY (Generic fallback for development)
                 let items = data.items;
                 if ((!items || items.length === 0) && !query) { // Only fallback mock content if NO query
                     items = Array.from({ length: 12 }).map((_, i) => ({
-                        tconst: `tt${i + page * 10}`,
+                        tconst: `tt${i + 1 + page * 10}`,
                         primaryTitle: `Movie Title ${i + 1 + page * 10}`,
                         startYear: 2020 + i,
                         genres: 'Action,Drama',
@@ -40,6 +42,7 @@ const Movies = () => {
                         titleType: 'movie'
                     }));
                     data.total = 100;
+                    data.items = items;
                 }
 
                 const movieObjects = (items || []).map(m => new Movie(m));
@@ -47,8 +50,8 @@ const Movies = () => {
                 setTotalPages(Math.ceil((data.total || 0) / 10));
                 setError(null);
             } catch (err) {
-                console.error(err);
-                setError('Failed to load movies.');
+                console.error("Failed to load movies", err);
+                setError('Failed to load movies. Please try again later.');
             } finally {
                 setLoading(false);
             }

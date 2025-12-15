@@ -27,9 +27,27 @@ const MovieListCard = ({ movie }) => {
                                     <span className="ms-2 text-capitalize">{movie.titleType}</span>
                                 </div>
                             </div>
-                            <Badge bg="warning" text="dark" className="px-2 py-1 rounded-pill">
-                                ★ {movie.rating}
-                            </Badge>
+                            <div className="d-flex flex-column align-items-end gap-1">
+                                {(() => {
+                                    const ratings = JSON.parse(localStorage.getItem('movieRatings') || '{}');
+                                    const userRating = ratings[movie.tconst];
+
+                                    let displayRating = movie.rating;
+                                    if (userRating) {
+                                        // Simple weighted average simulation
+                                        const votes = movie.numVotes || 0;
+                                        // Avoid division by zero if votes are missing
+                                        const totalScore = (movie.rating * votes) + userRating;
+                                        displayRating = (totalScore / (votes + 1)).toFixed(1);
+                                    }
+
+                                    return (
+                                        <Badge bg="warning" text="dark" className="px-2 py-1 rounded-pill">
+                                            ★ {displayRating}
+                                        </Badge>
+                                    );
+                                })()}
+                            </div>
                         </div>
 
                         <div className="mb-3">

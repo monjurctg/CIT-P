@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Container, Row, Col, Badge, Button, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Badge, Button, Spinner, Alert, Modal } from 'react-bootstrap';
 import backendApi from '../api/backendApi';
 import { Movie } from '../domain/Movie';
 
@@ -9,6 +9,10 @@ const MovieDetails = () => {
     const [movie, setMovie] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isBookmarked, setIsBookmarked] = useState(false);
+    const [showRatingModal, setShowRatingModal] = useState(false);
+    const [userRating, setUserRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
 
     useEffect(() => {
         const fetchMovie = async () => {
@@ -18,6 +22,9 @@ const MovieDetails = () => {
                 // Mock data fallback
                 let movieData = data;
                 if (!movieData) {
+                    // Generate deterministic mock stats based on ID
+                    const idNum = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
                     movieData = {
                         tconst: id,
                         primaryTitle: `Movie Details Title for ${id}`,
@@ -26,11 +33,16 @@ const MovieDetails = () => {
                         startYear: 2022,
                         runtimeMinutes: 120,
                         genres: 'Action,Adventure,Sci-Fi',
-                        averageRating: 8.5,
-                        numVotes: 1500
+                        averageRating: (idNum % 5) + 5.0 + (idNum % 10) / 10, // 5.0 - 9.9
+                        numVotes: 1000 + (idNum % 2000)
                     };
                 }
                 setMovie(new Movie(movieData));
+
+                const ratings = JSON.parse(localStorage.getItem('movieRatings') || '{}');
+                if (ratings[movieData.tconst]) {
+                    setUserRating(ratings[movieData.tconst]);
+                }
             } catch (err) {
                 setError('Failed to load movie details.');
             } finally {
@@ -39,6 +51,26 @@ const MovieDetails = () => {
         };
         fetchMovie();
     }, [id]);
+
+    const handleBookmark = () => {
+        const current = JSON.parse(localStorage.getItem('watchlist') || '[]');
+        let updated;
+        if (isBookmarked) {
+            updated = current.filter(mid => mid !== movie.tconst);
+        } else {
+            updated = [...current, movie.tconst];
+        }
+        localStorage.setItem('watchlist', JSON.stringify(updated));
+        setIsBookmarked(!isBookmarked);
+    };
+
+    const handleRate = (rating) => {
+        const ratings = JSON.parse(localStorage.getItem('movieRatings') || '{}');
+        ratings[movie.tconst] = rating;
+        localStorage.setItem('movieRatings', JSON.stringify(ratings));
+        setUserRating(rating);
+        setShowRatingModal(false);
+    };
 
     if (loading) return <div className="text-center mt-5"><Spinner animation="border" /></div>;
     if (error) return <Container className="py-4"><Alert variant="danger">{error}</Alert></Container>;
@@ -74,8 +106,19 @@ const MovieDetails = () => {
                                 </div>
                             </div>
                             <div className="text-center bg-light p-2 rounded-3 border">
-                                <div className="h4 fw-bold mb-0 text-warning">★ {movie.rating}</div>
-                                <div className="small text-muted">{movie.numVotes} votes</div>
+                                <div className="h4 fw-bold mb-0 text-warning">
+                                    ★ {(() => {
+                                        // Dynamic rating calculation
+                                        let displayRating = movie.rating;
+                                        if (userRating > 0) {
+                                            const votes = movie.numVotes || 0;
+                                            const totalScore = (movie.rating * votes) + userRating;
+                                            displayRating = (totalScore / (votes + 1)).toFixed(1);
+                                        }
+                                        return displayRating;
+                                    })()}
+                                </div>
+                                <div className="small text-muted">{movie.numVotes + (userRating > 0 ? 1 : 0)} votes</div>
                             </div>
                         </div>
 
@@ -96,33 +139,66 @@ const MovieDetails = () => {
 
                         <div className="mt-auto pt-4 border-top">
                             <div className="d-flex gap-3">
-                                <Button variant="primary" size="lg" className="px-5 rounded-pill shadow-sm">
-                                    <span className="me-2">★</span> Rate Movie
+                                <Button
+                                    variant="primary"
+                                    size="lg"
+                                    className="px-5 rounded-pill shadow-sm"
+                                    onClick={() => setShowRatingModal(true)}
+                                >
+                                    <span className="me-2">★</span> {userRating > 0 ? `Rated ${userRating}/10` : 'Rate Movie'}
                                 </Button>
                                 <Button
-                                    variant={JSON.parse(localStorage.getItem('watchlist') || '[]').includes(movie.tconst) ? "dark" : "outline-dark"}
+                                    variant={isBookmarked ? "dark" : "outline-dark"}
                                     size="lg"
                                     className="px-4 rounded-pill"
-                                    onClick={() => {
-                                        const current = JSON.parse(localStorage.getItem('watchlist') || '[]');
-                                        let updated;
-                                        if (current.includes(movie.tconst)) {
-                                            updated = current.filter(id => id !== movie.tconst);
-                                        } else {
-                                            updated = [...current, movie.tconst];
-                                        }
-                                        localStorage.setItem('watchlist', JSON.stringify(updated));
-                                        // Force re-render (quick and dirty for MVP without context)
-                                        setMovie(new Movie({ ...movie }));
-                                    }}
+                                    onClick={handleBookmark}
                                 >
-                                    {JSON.parse(localStorage.getItem('watchlist') || '[]').includes(movie.tconst) ? "✓ In Watchlist" : "+ Add to Watchlist"}
+                                    {isBookmarked ? "✓ Bookmarked" : "+ Add to Bookmark"}
                                 </Button>
                             </div>
                         </div>
                     </Col>
                 </Row>
             </div>
+            {/* Rating Modal */}
+            <Modal show={showRatingModal} onHide={() => setShowRatingModal(false)} centered>
+                <Modal.Header closeButton className="border-0 pb-0">
+                    <Modal.Title className="fw-bold">Rate this Movie</Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="text-center py-4">
+                    <div className="mb-2 text-muted small text-uppercase">What did you think of</div>
+                    <h5 className="mb-4 fw-bold">{movie.displayTitle}</h5>
+
+                    <div className="d-flex justify-content-center mb-3">
+                        {[...Array(10)].map((_, i) => {
+                            const ratingValue = i + 1;
+                            const isSelected = ratingValue <= (hoverRating || userRating);
+
+                            return (
+                                <span
+                                    key={i}
+                                    style={{
+                                        cursor: 'pointer',
+                                        fontSize: '2rem',
+                                        color: isSelected ? '#ffc107' : '#e4e5e9',
+                                        transition: 'color 0.2s'
+                                    }}
+                                    className="mx-1"
+                                    onMouseEnter={() => setHoverRating(ratingValue)}
+                                    onMouseLeave={() => setHoverRating(0)}
+                                    onClick={() => handleRate(ratingValue)}
+                                >
+                                    ★
+                                </span>
+                            );
+                        })}
+                    </div>
+
+                    <div className="fw-bold text-warning" style={{ fontSize: '1.2rem', minHeight: '1.8rem' }}>
+                        {(hoverRating || userRating) > 0 ? `${hoverRating || userRating}/10` : ''}
+                    </div>
+                </Modal.Body>
+            </Modal>
         </Container>
     );
 };
