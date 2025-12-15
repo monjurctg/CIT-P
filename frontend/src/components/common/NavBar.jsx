@@ -24,7 +24,7 @@ const AppNavBar = () => {
                         <Nav.Link as={NavLink} to="/" end>Home</Nav.Link>
                         <Nav.Link as={NavLink} to="/movies">Movies</Nav.Link>
                         <Nav.Link as={NavLink} to="/people">People</Nav.Link>
-                        <Nav.Link as={NavLink} to="/bookmarks">Watchlist</Nav.Link>
+                        <Nav.Link as={NavLink} to="/bookmarks">Bookmark List</Nav.Link>
                     </Nav>
                     <Nav className="ms-auto">
                         <Nav.Link as={NavLink} to="/login">Signin</Nav.Link>
